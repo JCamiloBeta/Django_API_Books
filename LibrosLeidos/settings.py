@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+# Don't forget to import os at the beginning of the file
+import os
+# Import the dj-database-url package at the beginning of the file
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +24,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ck95j&0fbm#2xdw28$lxf=sczhln&^^bzj6vlcj$y#*)p-%k!2'
+SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-ck95j&0fbm#2xdw28$lxf=sczhln&^^bzj6vlcj$y#*)p-%k!2')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = 'RENDER' not in os.environ
 
 ALLOWED_HOSTS = []
-
+# https://docs.djangoproject.com/en/3.0/ref/settings/#allowed-hosts
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Application definition
 
@@ -49,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'LibrosLeidos.urls'
@@ -76,15 +84,20 @@ WSGI_APPLICATION = 'LibrosLeidos.wsgi.application'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'default': dj_database_url.config(
+        default= 'postgres://svvxwtog:RZOPYUAO_U5e8vyxwIqmphq8ZVeYb-M7@queenie.db.elephantsql.com/svvxwtog',
+        conn_max_age=600
+    )
+}
+'''    'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'svvxwtog',
         'USER': 'svvxwtog',
         'PASSWORD': 'RZOPYUAO_U5e8vyxwIqmphq8ZVeYb-M7',
         'HOST': 'queenie.db.elephantsql.com',  # O el host donde está tu base de datos
         'PORT': '5432',       # Puerto por defecto de PostgreSQL
-    }
-}
+    } '''
+
 
 
 
@@ -123,6 +136,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+if not DEBUG:
+    # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
+    # and renames the files with unique names for each version to support long-term caching
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
